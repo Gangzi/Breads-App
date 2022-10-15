@@ -1,18 +1,40 @@
 const express = require('express')
 const breads = express.Router()
 const Bread = require('../models/bread')
+const Baker = require('../models/baker.js')
+const baker = require('./bakers_controller')
 
-breads.get('/', (req, res) => {
-  Bread.find()
-    .then(foundBreads => {
-      res.render('index',
-        {
-          breads: foundBreads,
-          title: 'Index Page'
-        }
-      )
-    })
-})
+// Index:
+ //BRFORE AWAIT
+//breads.get('/', (req, res) => {
+  // Baker.find()
+  //   .then(foundBakers => {
+  //     Bread.find()
+  //     .then(foundBreads => {
+    breads.get('/', async (req, res)=>{
+    const foundBakers = await Baker.find().lean()
+    const foundBreads = await Bread.find().limit(2).lean()
+    console.log(foundBreads)
+          res.render('index', {
+              breads: foundBreads,
+              bakers: foundBakers,
+              title: 'Index Page'
+          })
+      })
+  
+
+// before virtual
+// breads.get('/', (req, res) => {
+//   Bread.find()
+//     .then(foundBreads => {
+//       res.render('index',
+//         {
+//           breads: foundBreads,
+//           title: 'Index Page'
+//         }
+//       )
+//     })
+// })
 
 
 
@@ -27,34 +49,74 @@ breads.get('/', (req, res) => {
 
 // NEW
 breads.get('/new', (req, res) => {
-  res.render('new')
+  Baker.find()
+    .then(foundBakers => {
+      res.render('new', {
+        bakers: foundBakers
+      })
+    })
 })
 // EDIT b4 mongoose
 //breads.get('/:indexArray/edit', (req, res) => {
- // res.render('edit', {
+// res.render('edit', {
 //    bread: Bread[req.params.indexArray],
- //   index: req.params.indexArray
+//   index: req.params.indexArray
 //  })
 //})
+
+
+// EDIT
 breads.get('/:id/edit', (req, res) => {
-  Bread.findById(req.params.id) 
-    .then(foundBread => { 
-      res.render('edit', {
-        bread: foundBread 
+  Baker.find()
+    .then(foundBakers => {
+      Bread.findById(req.params.id)
+        .then(foundBread => {
+          res.render('edit', {
+            bread: foundBread,
+            bakers: foundBakers
+          })
+        })
+    })
+})
+
+//show before mothods
+//breads.get('/:id', (req, res) => {
+// Bread.findById(req.params.id)
+//  .then(foundBread => {
+//  res.render('show', {
+//     bread: foundBread
+//})
+//   }).catch(err => {
+//     res.send('404')
+//   })
+//})
+// SHOW
+breads.get('/:id', (req, res) => {
+  Bread.findById(req.params.id)
+    .populate('baker')
+    .then(foundBread => {
+      const bakedBy = foundBread.getBakedBy()
+      // console.log(bakedBy)
+      res.render('show', {
+        bread: foundBread
       })
     })
 })
 
-breads.get('/:id', (req, res) => {
-  Bread.findById(req.params.id)
-    .then(foundBread => {
-      res.render('show', {
-        bread: foundBread
+// show 
+baker.get('/:id', (req, res) => {
+  Baker.findById(req.params.id)
+      .populate({
+          path: 'breads',
+          options: { limit: 2 }
       })
-    }).catch(err => {
-      res.send('404')
-    })
+      .then(foundBaker => {
+          res.render('bakerShow', {
+              baker: foundBaker
+          })
+      })
 })
+
 
 /* BEFORE Mongoose
 // SHOW
@@ -69,12 +131,14 @@ breads.get('/:arrayIndex', (req, res) => {
   }
 })
 */
-breads.delete('/:id', (req, res) => {
-  Bread.findByIdAndDelete(req.params.id)
-    .then(deletedBread => {
-      res.status(303).redirect('/breads')
-    })
-})
+
+//delete before hooks
+// breads.delete('/:id', (req, res) => {
+//   Bread.findByIdAndDelete(req.params.id)
+//     .then(deletedBread => {
+//       res.status(303).redirect('/breads')
+//     })
+// })
 
 // DELETE b4 mongoose
 //breads.delete('/:indexArray', (req, res) => {
@@ -114,8 +178,13 @@ breads.post('/', (req, res) => {
   res.redirect('/breads')
 })
 
-
-
+// delete
+baker.delete('/:id', (req, res) => {
+  Baker.findByIdAndDelete(req.params.id) 
+    .then(deletedBaker => { 
+      res.status(303).redirect('/breads')
+    })
+})
 
 
 module.exports = breads
